@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HearthLedger — Household Budget</title>
+<meta name="description" content="HearthLedger: a household budget site that runs offline. Track income, set category budgets, log spending and see where the money goes.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#/" aria-label="HearthLedger home">
+    <span class="brand-mark" aria-hidden="true">⌂</span>
+    <span class="brand-text">HearthLedger<small>Household budget</small></span>
+  </a>
+  <div class="month-switcher" role="group" aria-label="Choose month">
+    <button type="button" id="month-prev" class="btn btn-icon" aria-label="Previous month">‹</button>
+    <span id="month-label" class="month-label">November 2026</span>
+    <button type="button" id="month-next" class="btn btn-icon" aria-label="Next month">›</button>
+    <label class="visually-hidden" for="month-select">Jump to month</label>
+    <select id="month-select" aria-label="Jump to month"></select>
+  </div>
+</header>
+
+<nav class="sidenav" aria-label="Main">
+  <a href="#/" data-nav="dashboard">Dashboard</a>
+  <a href="#/budgets" data-nav="budgets">Budgets</a>
+  <a href="#/transactions" data-nav="transactions">Transactions</a>
+  <a href="#/insights" data-nav="insights">Insights</a>
+  <div class="nav-foot">
+    <p>Your ledger is saved on this device only — nothing leaves the browser.</p>
+    <button type="button" id="reset-demo" class="btn btn-small">Restore sample data</button>
+  </div>
+</nav>
+
+<main id="app" class="main" tabindex="-1"></main>
+
+<footer class="footer">
+  <p>HearthLedger keeps a household's money in one calm ledger: income in, spending out, a target for every category, and a clear view of what is left. Works offline; your figures stay on your device.</p>
+</footer>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
