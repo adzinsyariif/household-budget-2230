@@ -1,15 +1,17 @@
 // HearthLedger — household budget site entry (Node 22, standard library only).
-// The site itself is the app/ folder: plain static files a browser opens at app/index.html,
-// with no build step and no network request. This program hands the site in: it copies app/
-// and screenshots/ from beside this file to /output and writes /output/dossier.json with the
-// vendored make.fun library (vendor/makefun-frontend.ts, the kit's copy, unchanged).
+// The site itself is the app/ folder: plain static files a browser opens at
+// app/index.html, with no build step and no network request. This program
+// hands the site in: it copies app/ and screenshots/ from beside this file
+// to /output and writes /output/dossier.json with the vendored make.fun
+// library (vendor/makefun-frontend.ts, the kit's copy, unchanged).
 //
 // Serve the site locally with `node serve.ts`, then open http://localhost:8080.
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 //
-// Build log: v1 dashboard + budgets + transactions + insights; v2 screenshot pass fixed the
-// phone nav overlap and donut labels; v3 added the 6-month trend and CSV export.
+// Build log: v1 dashboard + budgets + transactions + insights; v2 split the
+// views per page and added savings goals, recurring bills, the 50/30/20
+// lens, daily pace, category movers and a running balance.
 
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

@@ -1,21 +1,21 @@
-// HearthLedger store: the ledger state, localStorage persistence, and every
-// derived figure the pages show (totals, category sums, budget progress).
+// HearthLedger store: the ledger state, localStorage persistence, and
+// every derived figure the pages show — totals, category sums, budget
+// progress, savings-goal progress, bill status, daily pace and movers.
+// Nothing here invents a number: each figure is arithmetic over the
+// ledger rows, so the pages always agree with each other.
 
-import { CATEGORIES, DEFAULT_BUDGETS, seedLedger } from './data.js';
+import { CATEGORIES, DEFAULT_BILLS, DEFAULT_BUDGETS, DEFAULT_GOALS, seedLedger } from './data.js';
 
-const KEY = 'hearthledger-v1';
+const KEY = 'hearthledger-v2';
 
 export function monthKeyOf(dateStr) { return dateStr.slice(0, 7); }
-
-export function currentMonthKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
 
 function freshState() {
   return {
     transactions: seedLedger(),
     budgets: { ...DEFAULT_BUDGETS },
+    goals: DEFAULT_GOALS.map((g) => ({ ...g })),
+    bills: DEFAULT_BILLS.map((b) => ({ ...b })),
     month: '2026-11',
     seeded: true,
   };
@@ -27,6 +27,8 @@ export function loadState() {
     if (!raw) { const s = freshState(); saveState(s); return s; }
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed.transactions) || typeof parsed.budgets !== 'object') return freshState();
+    if (!Array.isArray(parsed.goals)) parsed.goals = DEFAULT_GOALS.map((g) => ({ ...g }));
+    if (!Array.isArray(parsed.bills)) parsed.bills = DEFAULT_BILLS.map((b) => ({ ...b }));
     return parsed;
   } catch { return freshState(); }
 }
@@ -57,9 +59,16 @@ export function shiftMonth(key, delta) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+export function prevKey(key) { return shiftMonth(key, -1); }
+
 export function monthLabel(key) {
   const [y, m] = key.split('-').map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+}
+
+export function daysInMonth(key) {
+  const [y, m] = key.split('-').map(Number);
+  return new Date(y, m, 0).getDate();
 }
 
 export function monthTransactions(state, key) {
@@ -95,16 +104,106 @@ export function budgetRows(state, key) {
   });
 }
 
-// Last six months ending at `key`: income vs spending for the trend chart.
+// Needs / wants / savings shares of the month's targets and of what was
+// actually spent — the 50/30/20 lens on the same ledger.
+export function groupShares(state, key) {
+  const rows = budgetRows(state, key);
+  const groups = { needs: { target: 0, spent: 0 }, wants: { target: 0, spent: 0 }, savings: { target: 0, spent: 0 } };
+  for (const r of rows) { groups[r.group].target += r.target; groups[r.group].spent += r.spent; }
+  const income = monthTotals(state, key).income;
+  for (const g of Object.values(groups)) {
+    g.targetPct = income > 0 ? Math.round((g.target / income) * 100) : 0;
+    g.spentPct = income > 0 ? Math.round((g.spent / income) * 100) : 0;
+  }
+  return groups;
+}
+
+// Daily pace: spending so far divided by the days covered (up to the
+// latest entry), and where that pace lands by month end.
+export function dailyPace(state, key) {
+  const rows = monthTransactions(state, key).filter((t) => t.kind === 'expense');
+  const totals = monthTotals(state, key);
+  const lastDay = rows.length ? Math.max(...rows.map((t) => Number(t.date.slice(8, 10)))) : 0;
+  const perDay = lastDay > 0 ? totals.spending / lastDay : 0;
+  return { perDay, lastDay, projected: perDay * daysInMonth(key) };
+}
+
+// Category movers versus last month: biggest rises and falls in dollars.
+export function categoryMovers(state, key) {
+  const now = categorySpending(state, key);
+  const before = categorySpending(state, prevKey(key));
+  return CATEGORIES
+    .map((c) => ({ ...c, now: now[c.id] || 0, before: before[c.id] || 0, delta: (now[c.id] || 0) - (before[c.id] || 0) }))
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+}
+
+// Last `count` months ending at `key`: income, spending and what was kept.
 export function trendSeries(state, key, count = 6) {
   const out = [];
   for (let i = count - 1; i >= 0; i -= 1) {
     const k = shiftMonth(key, -i);
     const t = monthTotals(state, k);
-    out.push({ key: k, label: monthLabel(k).slice(0, 3), income: t.income, spending: t.spending });
+    out.push({ key: k, label: monthLabel(k).slice(0, 3), income: t.income, spending: t.spending, kept: t.remaining });
   }
   return out;
 }
+
+// Year to date (the selected month's calendar year, up to that month).
+export function yearToDate(state, key) {
+  const year = key.slice(0, 4);
+  let income = 0, spending = 0, months = 0;
+  for (const k of monthsPresent(state)) {
+    if (k.startsWith(year) && k <= key) { const t = monthTotals(state, k); income += t.income; spending += t.spending; months += 1; }
+  }
+  return { income, spending, kept: income - spending, months };
+}
+
+// --- Savings goals -------------------------------------------------------
+
+export function goalSaved(state, goal) {
+  let saved = goal.base || 0;
+  for (const t of state.transactions) {
+    if (t.kind === 'expense' && t.category === 'savings' && (t.note || '').includes('goal:' + goal.id)) saved += t.amount;
+  }
+  return saved;
+}
+
+export function goalProgress(state, goal, key) {
+  const saved = goalSaved(state, goal);
+  const pct = goal.target > 0 ? Math.min(100, Math.round((saved / goal.target) * 100)) : 0;
+  const remaining = Math.max(0, goal.target - saved);
+  const monthsLeft = goal.monthly > 0 ? Math.ceil(remaining / goal.monthly) : null;
+  const doneKey = monthsLeft === null ? null : shiftMonth(key, monthsLeft);
+  return { ...goal, saved, pct, remaining, monthsLeft, doneLabel: doneKey ? monthLabel(doneKey) : null };
+}
+
+export function addGoal(state, fields) {
+  const id = 'goal-' + Date.now().toString(36);
+  state.goals.push({ id, base: 0, ...fields });
+  saveState(state);
+  return id;
+}
+
+export function deleteGoal(state, id) {
+  state.goals = state.goals.filter((g) => g.id !== id);
+  saveState(state);
+}
+
+// --- Recurring bills -----------------------------------------------------
+
+export function billStatus(state, key) {
+  const rows = monthTransactions(state, key).filter((t) => t.kind === 'expense');
+  return state.bills.map((b) => {
+    const paidRow = rows.find((t) => t.category === b.category && t.label.toLowerCase().includes(b.name.toLowerCase()));
+    return { ...b, paid: Boolean(paidRow), paidAmount: paidRow ? paidRow.amount : null, paidDate: paidRow ? paidRow.date : null };
+  }).sort((a, b) => a.dueDay - b.dueDay);
+}
+
+export function billsTotal(state) {
+  return state.bills.reduce((a, b) => a + b.amount, 0);
+}
+
+// --- Ledger writes --------------------------------------------------------
 
 export function addTransaction(state, fields) {
   const id = 'tx-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);

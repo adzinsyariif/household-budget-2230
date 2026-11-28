@@ -3,13 +3,13 @@
    Type: Georgia for display figures, system sans for the working UI. */
 
 :root {
-  --ink: #123B3C;
+  --ink: #12403F;
   --ink-soft: #2C5A5B;
   --paper: #F7F3EA;
   --panel: #FFFDF8;
   --line: #E3DCCB;
   --text: #24312F;
-  --muted: #6E7A74;
+  --muted: #68766F;
   --moss: #5B8C5A;
   --amber: #D9932E;
   --clay: #C4553B;
@@ -50,7 +50,7 @@ a { color: var(--ink-soft); }
 .brand-text small { display: block; font-family: inherit; font-size: 0.72rem; letter-spacing: 0.04em; opacity: 0.8; }
 .month-switcher { display: flex; align-items: center; gap: 8px; }
 .month-label { font-family: Georgia, serif; font-size: 1.05rem; min-width: 8.5em; text-align: center; }
-.month-switcher select { max-width: 11em; }
+.month-switcher select { max-width: 11em; background: #F2EDDF; color: var(--ink); border-color: transparent; font-weight: 600; }
 
 .sidenav {
   position: fixed; left: 0; top: 61px; bottom: 0; width: 200px;
@@ -90,8 +90,10 @@ label { font-weight: 600; font-size: 0.9rem; display: grid; gap: 4px; }
 .card-income { border-top-color: var(--moss); }
 .card-spend { border-top-color: var(--clay); }
 .card-left { border-top-color: var(--amber); }
+.card-pace { border-top-color: var(--ink-soft); }
 .card-label { font-size: 0.82rem; font-weight: 700; letter-spacing: 0.02em; color: var(--muted); margin: 0 0 2px; }
 .card-value { font-family: Georgia, serif; font-size: 1.7rem; color: var(--ink); margin: 0; }
+.card-unit { font-size: 0.95rem; color: var(--muted); }
 .card-note { font-size: 0.85rem; color: var(--muted); margin: 2px 0 0; }
 
 /* ---------- panels & grids ---------- */
@@ -104,14 +106,15 @@ label { font-weight: 600; font-size: 0.9rem; display: grid; gap: 4px; }
 .panel svg { width: 100%; height: auto; display: block; }
 
 /* ---------- donut + legend ---------- */
-.donut-wrap { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: center; }
-.donut-wrap svg { width: 220px; }
+.donut-wrap { display: grid; grid-template-columns: 230px 1fr; gap: 16px; align-items: center; }
+.donut-wrap svg { width: 230px; }
 .legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 0.95rem; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; }
 .chart-centre { font-family: Georgia, serif; font-size: 24px; fill: var(--ink); }
 .chart-centre-sub { font-size: 12px; fill: var(--muted); }
 .chart-axis { font-size: 12px; fill: var(--muted); }
 .chart-grid { stroke: var(--line); stroke-width: 1; }
+.trend-note { margin-top: 12px; }
 
 /* ---------- budget bars ---------- */
 .budget-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -138,6 +141,14 @@ label { font-weight: 600; font-size: 0.9rem; display: grid; gap: 4px; }
 .allocation { font-weight: 700; color: var(--ink); background: #EFE9DA; border-radius: 10px; padding: 10px 12px; }
 .alloc-over { background: #F6E3DC; color: var(--clay); }
 
+/* ---------- 50/30/20 split bar ---------- */
+.split-title { margin-top: 16px; }
+.split-bar { display: flex; height: 34px; border-radius: 10px; overflow: hidden; margin-bottom: 8px; }
+.split-seg { display: grid; place-items: center; min-width: 0; }
+.split-unalloc { background: #EFE9DA; }
+.split-unalloc .split-label { color: var(--muted); }
+.split-label { color: #FFFDF8; font-size: 0.85rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }
+
 /* ---------- transactions ---------- */
 .tx-tools { display: grid; grid-template-columns: 2fr 1fr 1.4fr auto; gap: 10px; align-items: end; margin-bottom: 14px; }
 .tx-list { list-style: none; margin: 0 0 16px; padding: 0; }
@@ -152,6 +163,7 @@ label { font-weight: 600; font-size: 0.9rem; display: grid; gap: 4px; }
 .tx-label { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tx-meta { font-size: 0.85rem; color: var(--muted); }
 .tx-amount { font-variant-numeric: tabular-nums; font-weight: 700; }
+.tx-balance { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.9rem; min-width: 5.5em; text-align: right; }
 .amt-in { color: var(--moss); }
 .amt-out { color: var(--text); }
 .tx-actions { display: flex; gap: 6px; }
@@ -162,8 +174,49 @@ label { font-weight: 600; font-size: 0.9rem; display: grid; gap: 4px; }
 .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .form-actions { display: flex; gap: 10px; margin-top: 14px; }
 
+/* ---------- goals & bills ---------- */
+.goal-grid { list-style: none; margin: 0 0 8px; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.goal-card {
+  display: flex; gap: 14px; align-items: center;
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: #FFFEFA;
+}
+.goal-card svg { width: 92px; flex: none; }
+.ring-pct { font-family: Georgia, serif; font-size: 19px; fill: var(--ink); }
+.goal-main h3 { margin-bottom: 4px; }
+.goal-figs { margin-bottom: 2px; }
+.goal-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.goal-strip { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.goal-strip-row { display: grid; grid-template-columns: 1fr; gap: 3px; }
+.goal-strip-name { font-weight: 600; }
+.goal-strip-figs { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bill-strip { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.bill-strip li { display: flex; align-items: center; gap: 10px; }
+.bill-day {
+  display: grid; place-items: center; width: 30px; height: 30px; flex: none;
+  background: #EFE9DA; border: 1px solid var(--line); border-radius: 9px; font-weight: 700; color: var(--ink);
+}
+.bill-paid { background: #E2EFDF; color: #3E6B3D; }
+.table-wrap { overflow-x: auto; }
+.bills-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.bills-table th, .bills-table td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); }
+.bills-table th { color: var(--muted); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.bills-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.bills-table tfoot td { font-weight: 700; border-bottom: none; }
+.bill-due { font-weight: 700; color: var(--ink); }
+.pill { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 0.8rem; font-weight: 700; }
+.pill-paid { background: #E2EFDF; color: #3E6B3D; }
+.pill-due { background: #F6E8D8; color: #8A5A17; }
+
 /* ---------- insights ---------- */
 .tips { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.mover-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.mover-row { display: grid; grid-template-columns: 30px 1fr auto auto; gap: 10px; align-items: center; }
+.mover-row .budget-icon { grid-area: auto; }
+.mover-name { font-weight: 600; }
+.mover-figs { color: var(--muted); font-variant-numeric: tabular-nums; }
+.mover-delta { font-weight: 700; font-variant-numeric: tabular-nums; }
+.delta-up { color: var(--clay); }
+.delta-down { color: var(--moss); }
 
 /* ---------- phone layout ---------- */
 @media (max-width: 820px) {
@@ -172,17 +225,19 @@ label { font-weight: 600; font-size: 0.9rem; display: grid; gap: 4px; }
     flex-direction: row; align-items: stretch; padding: 6px; border-right: none; border-top: 1px solid var(--line);
     background: var(--panel); z-index: 10;
   }
-  .sidenav a { flex: 1; display: grid; place-items: center; padding: 6px 2px; font-size: 0.85rem; }
+  .sidenav a { flex: 1; display: grid; place-items: center; padding: 6px 2px; font-size: 0.82rem; text-align: center; }
   .nav-foot { display: none; }
   .main { margin-left: 0; padding: 14px 12px 4px; }
   .footer { margin-left: 0; padding: 8px 12px 76px; }
   .cards { grid-template-columns: 1fr 1fr; }
   .grid-2 { grid-template-columns: 1fr; }
   .donut-wrap { grid-template-columns: 1fr; justify-items: center; }
-  .donut-wrap svg { width: 200px; }
+  .donut-wrap svg { width: 210px; }
   .legend { width: 100%; }
   .tx-tools { grid-template-columns: 1fr 1fr; }
   .form-grid { grid-template-columns: 1fr 1fr; }
+  .goal-grid { grid-template-columns: 1fr; }
+  .tx-balance { display: none; }
   .budget-edit-row { grid-template-columns: 30px 1fr 110px; grid-template-areas: "icon name input" "icon bar status" "icon figs figs"; }
   .month-label { min-width: 0; font-size: 0.95rem; white-space: nowrap; }
   .month-switcher select { display: none; }

@@ -1,27 +1,50 @@
-// HearthLedger seed data: categories, monthly budget targets and a realistic
-// household ledger for June–November 2026 so the first load is alive.
+// HearthLedger seed data: the category set, monthly budget targets,
+// savings goals, recurring bills and a realistic household ledger for
+// June–November 2026 so the first load is alive with real figures.
 // All amounts are in US dollars. Dates are ISO days (YYYY-MM-DD).
 
 export const CATEGORIES = [
-  { id: 'housing',   name: 'Housing',        color: '#123B3C', icon: '⌂' },
-  { id: 'groceries', name: 'Groceries',      color: '#5B8C5A', icon: '◐' },
-  { id: 'utilities', name: 'Utilities',      color: '#D9932E', icon: '◑' },
-  { id: 'transport', name: 'Transport',      color: '#4E7FA6', icon: '➤' },
-  { id: 'dining',    name: 'Dining out',     color: '#C4553B', icon: '✦' },
-  { id: 'health',    name: 'Health',         color: '#8A6BA8', icon: '✚' },
-  { id: 'kids',      name: 'Kids & school',  color: '#3E9B8F', icon: '✿' },
-  { id: 'leisure',   name: 'Leisure',        color: '#B5658F', icon: '♪' },
-  { id: 'savings',   name: 'Savings',        color: '#7A8B3D', icon: '❦' },
-  { id: 'other',     name: 'Other',          color: '#8C8578', icon: '•' },
+  { id: 'housing',   name: 'Housing',       color: '#12403F', icon: '⌂', group: 'needs' },
+  { id: 'groceries', name: 'Groceries',     color: '#5B8C5A', icon: '◐', group: 'needs' },
+  { id: 'utilities', name: 'Utilities',     color: '#D9932E', icon: '◑', group: 'needs' },
+  { id: 'transport', name: 'Transport',     color: '#4E7FA6', icon: '➤', group: 'needs' },
+  { id: 'health',    name: 'Health',        color: '#8A6BA8', icon: '✚', group: 'needs' },
+  { id: 'kids',      name: 'Kids & school', color: '#3E9B8F', icon: '✿', group: 'needs' },
+  { id: 'dining',    name: 'Dining out',    color: '#C4553B', icon: '✦', group: 'wants' },
+  { id: 'leisure',   name: 'Leisure',       color: '#B5658F', icon: '♪', group: 'wants' },
+  { id: 'other',     name: 'Other',         color: '#8C8578', icon: '•', group: 'wants' },
+  { id: 'savings',   name: 'Savings',       color: '#7A8B3D', icon: '❦', group: 'savings' },
 ];
 
 export const INCOME_SOURCES = ['Salary', 'Freelance', 'Rental', 'Benefits', 'Other income'];
 
 // Monthly spending targets per category (dollars). Savings is a goal, not a cap.
 export const DEFAULT_BUDGETS = {
-  housing: 1500, groceries: 700, utilities: 320, transport: 320, dining: 300,
-  health: 220, kids: 340, leisure: 280, savings: 1200, other: 220,
+  housing: 1500, groceries: 700, utilities: 320, transport: 320, health: 220,
+  kids: 340, dining: 300, leisure: 280, other: 220, savings: 1200,
 };
+
+// Savings goals. `base` is what was set aside before the ledger starts;
+// transfers in the ledger tagged `goal:<id>` in their note add to it, so
+// the saved figure is always the ledger's own arithmetic.
+export const DEFAULT_GOALS = [
+  { id: 'emergency', name: 'Emergency fund', target: 9000, monthly: 450, base: 0 },
+  { id: 'holiday',   name: 'Family holiday', target: 3000, monthly: 200, base: 500 },
+  { id: 'boiler',    name: 'New boiler',     target: 2400, monthly: 150, base: 900 },
+];
+
+// Recurring bills: name, typical amount, day of month due, category.
+// A bill counts as paid in a month when a ledger entry that month carries
+// the bill's name in its label.
+export const DEFAULT_BILLS = [
+  { id: 'rent',      name: 'Rent',             amount: 1450, dueDay: 2,  category: 'housing' },
+  { id: 'electric',  name: 'Electricity & gas', amount: 132, dueDay: 3,  category: 'utilities' },
+  { id: 'lunches',   name: 'School lunches',    amount: 48,  dueDay: 6,  category: 'kids' },
+  { id: 'water',     name: 'Water bill',        amount: 41,  dueDay: 8,  category: 'utilities' },
+  { id: 'streaming', name: 'Streaming + music', amount: 24,  dueDay: 12, category: 'leisure' },
+  { id: 'bus',       name: 'Bus passes',        amount: 56,  dueDay: 13, category: 'transport' },
+  { id: 'internet',  name: 'Internet & phones', amount: 79,  dueDay: 19, category: 'utilities' },
+];
 
 let seq = 0;
 function tx(date, kind, category, label, amount, note = '') {
@@ -29,11 +52,12 @@ function tx(date, kind, category, label, amount, note = '') {
   return { id: 'seed-' + seq, date, kind, category, label, amount, note };
 }
 
-// One month of a two-adult, two-child household. Rent and salaries repeat;
-// the small rows vary so every month reads like a real ledger, not a copy.
+// One month of a two-adult, two-child household. Rent, salaries and the
+// savings transfer repeat; the small rows drift a little each month so
+// every month reads like a real ledger, not a photocopy.
 function monthRows(y, m, vary) {
   const d = (day) => `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  const rows = [
+  return [
     tx(d(1), 'income', 'Salary', 'Salary — Maya (clinic)', 3420),
     tx(d(1), 'income', 'Salary', 'Salary — Daniel (logistics)', 2890),
     tx(d(2), 'expense', 'housing', 'Rent — Maple St flat', 1450, 'Standing order'),
@@ -61,10 +85,9 @@ function monthRows(y, m, vary) {
     tx(d(24), 'expense', 'kids', 'School trip payment', 30 + vary * 2),
     tx(d(25), 'expense', 'dining', 'Takeaway — noodle bar', 36 + vary * 2),
     tx(d(26), 'expense', 'other', 'Birthday gift for Gran', 40),
-    tx(d(27), 'expense', 'savings', 'Transfer to emergency fund', 450),
+    tx(d(27), 'expense', 'savings', 'Transfer to emergency fund', 450, 'goal:emergency'),
     tx(d(28), 'expense', 'groceries', 'Weekly shop — FreshMart', 128 + vary * 4),
   ];
-  return rows;
 }
 
 export function seedLedger() {
@@ -77,8 +100,11 @@ export function seedLedger() {
     ...monthRows(2026, 10, 3),
     ...monthRows(2026, 11, 2),
   ];
-  // November extras: a one-off repair and a small bonus, so the current
-  // month has a story the insights page can point at.
+  // A few one-offs so the story has texture: a quarterly insurance bill in
+  // September, a holiday-fund top-up in October, and in November a boiler
+  // repair (the reason that goal exists) plus a small work bonus.
+  all.push(tx('2026-09-09', 'expense', 'transport', 'Car insurance (quarterly)', 212));
+  all.push(tx('2026-10-27', 'expense', 'savings', 'Transfer to holiday fund', 400, 'goal:holiday'));
   all.push(tx('2026-11-15', 'expense', 'housing', 'Boiler repair (call-out)', 185, 'One-off'));
   all.push(tx('2026-11-20', 'income', 'Other income', 'Work bonus — Daniel', 250));
   return all;

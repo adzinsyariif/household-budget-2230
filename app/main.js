@@ -1,12 +1,19 @@
-// HearthLedger main: hash routing, the month switcher, form wiring and
-// CSV export. State lives in store.js; pages render from views.js.
+// HearthLedger main: hash routing, the month switcher, form wiring,
+// goal contributions and CSV export. State lives in store.js; each page
+// renders from its own views-*.js module.
 
 import { CATEGORIES, INCOME_SOURCES } from './data.js';
 import {
-  addTransaction, deleteTransaction, loadState, monthLabel, monthTransactions,
-  monthsPresent, resetState, saveState, setBudget, shiftMonth, updateTransaction,
+  addGoal, addTransaction, deleteGoal, deleteTransaction, loadState,
+  monthLabel, monthTransactions, monthsPresent, resetState, saveState,
+  setBudget, shiftMonth, updateTransaction,
 } from './store.js';
-import { budgetsView, dashboardView, insightsView, quickAddForm, transactionsView } from './views.js';
+import { quickAddForm } from './ui.js';
+import { dashboardView } from './views-dashboard.js';
+import { budgetsView } from './views-budgets.js';
+import { transactionsView } from './views-transactions.js';
+import { goalsView } from './views-goals.js';
+import { insightsView } from './views-insights.js';
 
 let state = loadState();
 let editingId = null;
@@ -19,6 +26,7 @@ function route() {
   const hash = location.hash || '#/';
   if (hash.startsWith('#/budgets')) return 'budgets';
   if (hash.startsWith('#/transactions')) return 'transactions';
+  if (hash.startsWith('#/goals')) return 'goals';
   if (hash.startsWith('#/insights')) return 'insights';
   return 'dashboard';
 }
@@ -33,6 +41,7 @@ function render() {
   monthLabelEl.textContent = monthLabel(state.month);
   if (r === 'budgets') app.innerHTML = budgetsView(state);
   else if (r === 'transactions') app.innerHTML = transactionsView(state, filters);
+  else if (r === 'goals') app.innerHTML = goalsView(state);
   else if (r === 'insights') app.innerHTML = insightsView(state);
   else app.innerHTML = dashboardView(state);
   wire();
@@ -79,6 +88,33 @@ function wire() {
     render();
   }));
 
+  // Goal actions: contribute logs a tagged savings transfer; remove drops the goal.
+  app.querySelectorAll('[data-contribute]').forEach((b) => b.addEventListener('click', () => {
+    const goal = state.goals.find((g) => g.id === b.getAttribute('data-contribute'));
+    if (!goal || !(goal.monthly > 0)) return;
+    addTransaction(state, {
+      kind: 'expense', category: 'savings',
+      label: 'Transfer to ' + goal.name.toLowerCase(),
+      amount: goal.monthly, date: state.month + '-28', note: 'goal:' + goal.id,
+    });
+    render();
+  }));
+  app.querySelectorAll('[data-delete-goal]').forEach((b) => b.addEventListener('click', () => {
+    deleteGoal(state, b.getAttribute('data-delete-goal'));
+    render();
+  }));
+  const goalForm = document.getElementById('goal-form');
+  if (goalForm) goalForm.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const data = new FormData(goalForm);
+    const name = String(data.get('name')).trim();
+    const target = Math.round(Number(data.get('target')));
+    const monthly = Math.round(Number(data.get('monthly')));
+    if (!name || !(target > 0) || monthly < 0) return;
+    addGoal(state, { name, target, monthly });
+    render();
+  });
+
   wireForm();
 }
 
@@ -111,6 +147,7 @@ function wireForm() {
     else addTransaction(state, fields);
     state.month = fields.date.slice(0, 7);
     saveState(state);
+    syncMonthSelect();
     render();
   });
 }
@@ -131,16 +168,16 @@ function exportCsv() {
 
 // Month switcher in the header.
 document.getElementById('month-prev').addEventListener('click', () => {
-  state.month = shiftMonth(state.month, -1); saveState(state); render();
+  state.month = shiftMonth(state.month, -1); saveState(state); syncMonthSelect(); render();
 });
 document.getElementById('month-next').addEventListener('click', () => {
-  state.month = shiftMonth(state.month, 1); saveState(state); render();
+  state.month = shiftMonth(state.month, 1); saveState(state); syncMonthSelect(); render();
 });
 document.getElementById('month-select').addEventListener('change', (ev) => {
   state.month = ev.target.value; saveState(state); render();
 });
 document.getElementById('reset-demo').addEventListener('click', () => {
-  state = resetState(); editingId = null; render();
+  state = resetState(); editingId = null; syncMonthSelect(); render();
 });
 
 function syncMonthSelect() {
